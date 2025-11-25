@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sog'lik Statistika</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .days-counter {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 16px 0;
+            animation: scaleIn 0.6s;
+        }
+
+        .milestone {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin: 16px 0;
+            font-size: 18px;
+            text-align: center;
+            animation: slideIn 0.7s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.5s backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        .stat-card:nth-child(5) { animation-delay: 0.5s; }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-right: 12px;
+        }
+
+        .stat-title {
+            font-size: 16px;
+            color: var(--tg-theme-hint-color, #999);
+            font-weight: 500;
+        }
+
+        .progress-container {
+            background: rgba(0,0,0,0.1);
+            height: 32px;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 16px;
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .progress-nicotine { background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%); }
+        .progress-breathing { background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); }
+        .progress-pulse { background: linear-gradient(90deg, #fa709a 0%, #fee140 100%); }
+        .progress-taste { background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%); }
+        .progress-smell { background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 100%); }
+
+        .overall-health {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 24px 0;
+            animation: pulse 2s infinite;
+        }
+
+        .overall-health h2 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .overall-percentage {
+            font-size: 56px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .money-saved {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            margin: 16px 0;
+        }
+
+        .money-amount {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .debug-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 12px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <div class="loading">📊 Yuklanmoqda...</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Debug log
+        function log(message) {
+            console.log('[Mini App]', message);
+        }
+
+        log('Mini App started');
+        log('URL: ' + window.location.href);
+
+        // Ma'lumotlarni olish
+        let data = null;
+
+        // 1. Hash'dan (#) ma'lumotlarni o'qish
+        if (window.location.hash) {
+            const hash = window.location.hash.substring(1); // # ni olib tashlash
+            log('Hash found: ' + hash.substring(0, 50) + '...');
+            
+            const params = new URLSearchParams(hash);
+            const dataParam = params.get('data');
+            
+            if (dataParam) {
+                try {
+                    const decoded = decodeURIComponent(dataParam);
+                    data = JSON.parse(decoded);
+                    log('Data decoded from hash successfully');
+                } catch (error) {
+                    log('Error decoding hash data: ' + error.message);
+                }
+            }
+        }
+
+        // 2. Query parametrlaridan (?data=) o'qish
+        if (!data) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('data');
+            
+            if (dataParam) {
+                log('Query param found');
+                try {
+                    // Base64 decode
+                    const decoded = atob(dataParam);
+                    data = JSON.parse(decoded);
+                    log('Data decoded from query successfully');
+                } catch (error) {
+                    log('Error decoding query data: ' + error.message);
+                    // URL encoded variant
+                    try {
+                        const decoded = decodeURIComponent(dataParam);
+                        data = JSON.parse(decoded);
+                        log('Data decoded from URL encoded successfully');
+                    } catch (error2) {
+                        log('Error decoding URL encoded data: ' + error2.message);
+                    }
+                }
+            }
+        }
+
+        // Ma'lumotlarni ko'rsatish
+        if (data) {
+            log('Rendering stats...');
+            renderStats(data);
+        } else {
+            log('No data found');
+            document.getElementById('app').innerHTML = `
+                <div class="error">
+                    <h2>❌ Xatolik</h2>
+                    <p>Ma'lumotlar topilmadi</p>
+                    <div class="debug-info">
+                        URL: ${window.location.href}<br>
+                        Hash: ${window.location.hash}<br>
+                        Search: ${window.location.search}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStats(data) {
+            log('Data received: ' + JSON.stringify(data).substring(0, 100));
+            
+            const savedMoney = data.days * data.cigarettes_per_day * data.cigarette_price;
+            
+            const html = `
+                <div class="header">
+                    <h1>🎯 Sog'lik Statistika</h1>
+                    <div class="days-counter">${data.days} kun</div>
+                    <p>${data.hours % 24} soat, ${data.minutes % 60} daqiqa</p>
+                    <p>${data.hours} soat</p>
+                    <div class="milestone">
+                        ${getMilestone(data.days)}
+                    </div>
+                </div>
+
+                <div class="overall-health">
+                    <h2>💪 Umumiy Sog'lik</h2>
+                    <div class="overall-percentage">${data.stats.overall}%</div>
+                    <p>Ajoyib! Davom eting!</p>
+                </div>
+
+                <div class="money-saved">
+                    <div>💰 Tejalgan Pul</div>
+                    <div class="money-amount">${savedMoney.toLocaleString('uz-UZ')} so'm</div>
+                    <p>${(data.cigarettes_per_day * data.days).toLocaleString('uz-UZ')} dona sigaret chekmaganingiz</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">🫁</div>
+                            <div class="stat-title">Nikotin darajasi</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar progress-nicotine" style="width: ${data.stats.nicotine_free}%">
+                                ${data.stats.nicotine_free}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">🌬️</div>
+                            <div class="stat-title">Nafas olish</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar progress-breathing" style="width: ${data.stats.breathing}%">
+                                ${data.stats.breathing}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">❤️</div>
+                            <div class="stat-title">Pulse rate</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar progress-pulse" style="width: ${data.stats.pulse}%">
+                                ${data.stats.pulse}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">👅</div>
+                            <div class="stat-title">Tam bilish</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar progress-taste" style="width: ${data.stats.taste}%">
+                                ${data.stats.taste}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">👃</div>
+                            <div class="stat-title">Hid bilish</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar progress-smell" style="width: ${data.stats.smell}%">
+                                ${data.stats.smell}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('app').innerHTML = html;
+            log('Stats rendered successfully');
+        }
+
+        function getMilestone(days) {
+            const milestones = {
+                365: "🏅 1 YIL - siz g'olibsiz!",
+                180: "🎯 6 oy - yurak xuruj xavfi 50% kamaydi!",
+                90: "💎 3 oy - afsona!",
+                60: "⭐ 2 oy - sog'ligingiz sezilarli yaxshilandi!",
+                30: "👑 1 oy - siz champion!",
+                14: "🌈 2 hafta - nafas olish yaxshilanmoqda!",
+                7: "🏆 1 hafta - ajoyib!",
+                3: "🎉 Nikotin 100% chiqdi!",
+                1: "🌟 Birinchi kun!",
+                0: "🎯 Sayohatingiz boshlandi!"
+            };
+
+            for (let day of Object.keys(milestones).map(Number).sort((a, b) => b - a)) {
+                if (days >= day) {
+                    return milestones[day];
+                }
+            }
+            return "💪 Davom eting!";
+        }
+    </script>
+</body>
+</html>
